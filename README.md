@@ -2,7 +2,7 @@
 
 <div align="center">
   <h1 class="title is-1 publication-title">
-    Revisit Mixture Models for Multi-Agent Simulation: Experimental Study within a Unified Framework
+    UniMM: A Unified Mixture Model Framework for Multi-Agent Simulation
   </h1>
 
   <p>
@@ -42,18 +42,20 @@
 
 
 ## Abstract
-Simulation plays a crucial role in assessing autonomous driving systems, where the generation of realistic multi-agent behaviors is a key aspect.
-In multi-agent simulation, the primary challenges include behavioral multimodality and closed-loop distributional shifts.
-In this study, we revisit mixture models for generating multimodal agent behaviors, which can cover the mainstream methods including continuous mixture models and GPT-like discrete models.
-Furthermore, we introduce a closed-loop sample generation approach tailored for mixture models to mitigate distributional shifts.
-Within the unified mixture model~(UniMM) framework, we recognize critical configurations from both model and data perspectives.
-We conduct a systematic examination of various model configurations, including positive component matching, continuous regression, prediction horizon, and the number of components.
+**Simulation** plays a crucial role in assessing autonomous driving systems, where the generation of realistic **multi-agent behaviors** is a key aspect.
+In multi-agent simulation, the primary challenges include behavioral **multimodality** and closed-loop **distributional shifts**.
+In this study, we formulate a **unified mixture model (UniMM)** framework for generating multimodal agent behaviors, which can cover the mainstream methods including regression-based mixture models and discrete NTP models.
+Furthermore, we introduce a **closed-loop sample generation** approach tailored for mixture models to mitigate distributional shifts.
+Within the UniMM framework, we recognize critical configurations from both the model and data perspectives.
+We conduct a systematic examination of various model configurations, and comprehensively characterize their effects.
 Moreover, our investigation into the data configuration highlights the pivotal role of closed-loop samples in achieving realistic simulations.
-To extend the benefits of closed-loop samples across a broader range of mixture models, we further address the shortcut learning and off-policy learning issues.
-Leveraging insights from our exploration, the distinct variants proposed within the UniMM framework, including discrete, anchor-free, and anchor-based models, all achieve state-of-the-art performance on the WOSAC benchmark.
+To extend the benefits of closed-loop samples across a broader range of mixture models, we further introduce a **temporal disentanglement-and-alignment mechanism** to address the shortcut learning and off-policy learning issues.
+Leveraging insights from our exploration, the **distinct variants** proposed within the UniMM framework, including discrete, anchor-free, and anchor-based models, all achieve **state-of-the-art** performance on the WOSAC benchmark.
 
 
 ## News
+
+[2026-06] Our [UniMM paper](https://doi.org/10.1109/TPAMI.2026.3700402) has been accepted by IEEE Transactions on Pattern Analysis and Machine Intelligence (TPAMI)!
 
 [2026-06] Code has been released.
 
