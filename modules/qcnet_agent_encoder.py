@@ -52,7 +52,7 @@ class QCNetAgentEncoder(nn.Module):
         self.head_dim = head_dim
         self.dropout = dropout
 
-        if dataset == 'waymo':
+        if dataset in ('waymo', 'bench2drive'):
             input_dim_x_a = 7
             input_dim_r_t = 4
             input_dim_r_pl2a = 3
@@ -99,7 +99,7 @@ class QCNetAgentEncoder(nn.Module):
         head_a = data['agent']['heading'] # (num_agents, num_steps)
         head_vector_a = torch.stack([head_a.cos(), head_a.sin()], dim=-1) # (num_agents, num_steps, 2)
 
-        if self.dataset == 'waymo':
+        if self.dataset in ('waymo', 'bench2drive'):
             vel_a = data['agent']['velocity'][..., :self.input_dim] # (num_agents, num_steps, input_dim)
 
             length_a = data['agent']['length'].unsqueeze(1).repeat(1, num_steps) # (num_agents, num_steps)
@@ -111,7 +111,7 @@ class QCNetAgentEncoder(nn.Module):
             raise ValueError('{} is not a valid dataset'.format(self.dataset))
 
         ## encode agent trajectories
-        if self.dataset == 'waymo':
+        if self.dataset in ('waymo', 'bench2drive'):
             x_a = torch.stack([
                 torch.norm(motion_vector_a[..., :2], p=2, dim=-1),
                 angle_between_2d_vectors(ctr_vector=head_vector_a, nbr_vector=motion_vector_a[..., :2]),

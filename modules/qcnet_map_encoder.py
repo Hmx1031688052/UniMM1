@@ -42,7 +42,7 @@ class QCNetMapEncoder(nn.Module):
         self.head_dim = head_dim
         self.dropout = dropout
 
-        if dataset == 'waymo':
+        if dataset in ('waymo', 'bench2drive'):
             if input_dim == 2:
                 input_dim_x_pt = 0
                 input_dim_x_pl = 0
@@ -85,7 +85,7 @@ class QCNetMapEncoder(nn.Module):
         orient_pl = data['map_polygon']['orientation'].contiguous()
         orient_vector_pl = torch.stack([orient_pl.cos(), orient_pl.sin()], dim=-1)
 
-        if self.dataset == 'waymo':
+        if self.dataset in ('waymo', 'bench2drive'):
             if self.input_dim == 2:
                 x_pt = None
                 x_pl = None

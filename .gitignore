@@ -111,3 +111,4 @@ venv.bak/
 # seed project
 data
 output*
+anchors/*bench2drive*.npy

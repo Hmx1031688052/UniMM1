@@ -43,11 +43,12 @@ class WaymoDataModule(pl.LightningDataModule):
             data_root=self.root, split_dir='processed_scenarios_validation',
             info_file='processed_scenarios_validation_infos.pkl',
         )
-        self.test_dataset = WaymoDataset(
-            data_root=self.root, split_dir='processed_scenarios_testing',
-            info_file='processed_scenarios_testing_infos.pkl',
-            test=True,
-        )
+        if stage in ('test', 'predict'):
+            self.test_dataset = WaymoDataset(
+                data_root=self.root, split_dir='processed_scenarios_testing',
+                info_file='processed_scenarios_testing_infos.pkl',
+                test=True,
+            )
 
     def train_dataloader(self):
         return DataLoader(self.train_dataset, batch_size=self.train_batch_size, shuffle=self.shuffle,

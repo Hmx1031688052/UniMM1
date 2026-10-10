@@ -13,9 +13,12 @@ from pytorch_lightning.strategies import DDPStrategy
 from datamodules import WaymoDataModule
 from models import UniMM
 
-import resource
-rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
-resource.setrlimit(resource.RLIMIT_NOFILE, (655360, rlimit[1]))
+try:
+    import resource
+    soft_limit, hard_limit = resource.getrlimit(resource.RLIMIT_NOFILE)
+    resource.setrlimit(resource.RLIMIT_NOFILE, (min(655360, hard_limit), hard_limit))
+except (ImportError, OSError, ValueError):
+    pass
 
 
 if __name__ == '__main__':
@@ -42,14 +45,16 @@ if __name__ == '__main__':
 
     model = UniMM(**vars(args))
     datamodule = {
-        'waymo': WaymoDataModule
+        'waymo': WaymoDataModule,
+        'bench2drive': WaymoDataModule,
     }[args.dataset](**vars(args))
 
     model_checkpoint = ModelCheckpoint(monitor='val_cls_loss', save_top_k=5, save_last=True, mode='min')
     lr_monitor = LearningRateMonitor(logging_interval='epoch')
     trainer = pl.Trainer(
         accelerator=args.accelerator, devices=args.devices,
-        strategy=DDPStrategy(find_unused_parameters=False, gradient_as_bucket_view=True),
+        strategy=DDPStrategy(find_unused_parameters=False, gradient_as_bucket_view=True)
+                 if args.devices > 1 else 'auto',
         callbacks=[model_checkpoint, lr_monitor],
         accumulate_grad_batches=args.accumulate_grad_batches,
         max_epochs=args.max_epochs,
