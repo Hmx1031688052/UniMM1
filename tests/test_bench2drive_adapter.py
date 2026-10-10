@@ -3,13 +3,14 @@ import json
 import pickle
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 from types import SimpleNamespace
 
 import numpy as np
 
 from bench2drive_anchors import main as make_anchors
-from bench2drive_preprocess import process
+from bench2drive_preprocess import process, read_frame
 
 
 class Bench2DriveAdapterTest(unittest.TestCase):
@@ -27,7 +28,7 @@ class Bench2DriveAdapterTest(unittest.TestCase):
             for name in names:
                 annos = clips / name / 'anno'
                 annos.mkdir(parents=True)
-                for frame in range(91):
+                for frame in range(101):
                     actor = {'class': 'ego_vehicle', 'id': 1,
                              'center': [frame * 0.1, 0, 0],
                              'extent': [1, 2, 1], 'rotation': [0, 0, 0]}
@@ -36,13 +37,15 @@ class Bench2DriveAdapterTest(unittest.TestCase):
             split_file = root / 'split.json'
             split_file.write_text(json.dumps({'val': [f'v1/{names[1]}']}), encoding='utf-8')
             output = root / 'processed'
-            process(SimpleNamespace(raw_root=str(root / 'raw'), map_root=str(maps),
-                                    split_file=str(split_file), output_root=str(output),
-                                    stride=10, map_radius=100, max_scenarios=0))
+            with patch('bench2drive_preprocess.read_frame', wraps=read_frame) as reader:
+                process(SimpleNamespace(raw_root=str(root / 'raw'), map_root=str(maps),
+                                        split_file=str(split_file), output_root=str(output),
+                                        stride=10, map_radius=100, max_scenarios=0))
+                self.assertEqual(reader.call_count, 202)  # Overlapping windows reuse frames.
             for split in ('training', 'validation'):
                 with open(output / f'processed_scenarios_{split}_infos.pkl', 'rb') as stream:
                     infos = pickle.load(stream)
-                self.assertEqual(len(infos), 1)
+                self.assertEqual(len(infos), 2)
                 with open(output / f'processed_scenarios_{split}' /
                           f"sample_{infos[0]['scenario_id']}.pkl", 'rb') as stream:
                     sample = pickle.load(stream)
@@ -52,9 +55,9 @@ class Bench2DriveAdapterTest(unittest.TestCase):
                 self.assertEqual(sample['tracks_to_predict']['track_index'], [0])
             anchor_file = root / 'anchors.npy'
             make_anchors(SimpleNamespace(root=str(output), output=str(anchor_file),
-                                         num_modes=1, max_per_type=100, seed=2025))
+                                         num_modes=2, max_per_type=100, seed=2025))
             anchors = np.load(anchor_file)
-            self.assertEqual(anchors.shape, (5, 1, 80, 3))
+            self.assertEqual(anchors.shape, (5, 2, 80, 3))
             self.assertAlmostEqual(anchors[1, 0, 0, 0], 0.1, places=5)
 
 

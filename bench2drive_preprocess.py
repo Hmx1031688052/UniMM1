@@ -8,6 +8,7 @@ import gzip
 import json
 import pickle
 import re
+import time
 from pathlib import Path
 
 import numpy as np
@@ -136,44 +137,75 @@ def make_sample(frames, scene_id, polylines, radius):
 
 
 def process(args):
+    started = time.monotonic()
+    def log(message):
+        print(f'[{time.monotonic() - started:8.1f}s] {message}', flush=True)
+
+    if args.stride <= 0:
+        raise ValueError('--stride must be positive')
     root = Path(args.raw_root)
     clips_root = root / 'v1' if (root / 'v1').is_dir() else root
     map_root = Path(args.map_root)
     output = Path(args.output_root)
+    output.mkdir(parents=True, exist_ok=True)
     with open(args.split_file, encoding='utf-8') as stream:
         val_names = {Path(name).name for name in json.load(stream)['val']}
+    log(f'Scanning clip directories: {clips_root}')
     clips = sorted(path.parent for path in clips_root.glob('*/anno') if path.is_dir())
     if not clips:
         raise FileNotFoundError(f'No clip/anno directories under {clips_root}')
     map_cache = {}
     infos = {'training': [], 'validation': []}
-    for clip in clips:
+    log(f'Found {len(clips)} clips; output: {output}')
+    for clip_index, clip in enumerate(clips, 1):
+        log(f'Clip {clip_index}/{len(clips)}: {clip.name}')
         town = town_from_name(clip.name)
         if town not in map_cache:
             matches = sorted(map_root.glob(f'{town}_HD_map.npz'))
             if not matches:
                 raise FileNotFoundError(f'Missing {town}_HD_map.npz in {map_root}')
+            log(f'Loading map: {matches[0]}')
             map_cache[town] = map_polylines(matches[0])
+            log(f'Map ready: {len(map_cache[town])} polylines')
         split = 'validation' if clip.name in val_names else 'training'
         frame_paths = sorted((clip / 'anno').glob('*.json.gz'))
+        log(f'{split}: {len(frame_paths)} annotation files')
         if len(frame_paths) < STEPS:
             continue
         frame_ids = [int(path.name.split('.')[0]) for path in frame_paths]
         if len(frame_ids) != len(set(frame_ids)):
             raise ValueError(f'Duplicate frame index in {clip}')
-        for start in range(0, len(frame_paths) - STEPS + 1, args.stride):
+        frame_cache = {}
+        for window_index, start in enumerate(range(0, len(frame_paths) - STEPS + 1, args.stride), 1):
             if frame_ids[start + STEPS - 1] - frame_ids[start] != STEPS - 1:
                 continue
-            frames = [read_frame(path) for path in frame_paths[start:start + STEPS]]
+            window_paths = frame_paths[start:start + STEPS]
+            # Retain only the current window; overlapping frames are read once.
+            wanted = set(window_paths)
+            frame_cache = {path: frame for path, frame in frame_cache.items() if path in wanted}
+            verbose = bool(args.max_scenarios) or window_index == 1 or window_index % 10 == 0
+            missing = [path for path in window_paths if path not in frame_cache]
+            if verbose:
+                log(f'Window {window_index}: reading {len(missing)} new annotation files')
+            for read_index, path in enumerate(missing, 1):
+                if verbose and (read_index == 1 or read_index % 25 == 0):
+                    log(f'Reading {read_index}/{len(missing)}: {path.name}')
+                frame_cache[path] = read_frame(path)
+            frames = [frame_cache[path] for path in window_paths]
             scene_id = f'{clip.name}__{frame_ids[start]:05d}'
+            if verbose:
+                log(f'Building trajectories and selecting map for {scene_id}')
             sample = make_sample(frames, scene_id, map_cache[town], args.map_radius)
             if sample is None:
+                log(f'Skipped {scene_id}: no valid ego_vehicle at current frame')
                 continue
             destination = output / f'processed_scenarios_{split}'
             destination.mkdir(parents=True, exist_ok=True)
             with open(destination / f'sample_{scene_id}.pkl', 'wb') as stream:
                 pickle.dump(sample, stream, protocol=pickle.HIGHEST_PROTOCOL)
             infos[split].append({'scenario_id': scene_id, 'tfrecord_file': '', 'tfrecord_idx': 0})
+            if verbose:
+                log(f'Saved {scene_id}; total {sum(map(len, infos.values()))} scenarios')
             if args.max_scenarios and sum(map(len, infos.values())) >= args.max_scenarios:
                 break
         if args.max_scenarios and sum(map(len, infos.values())) >= args.max_scenarios:
@@ -181,7 +213,7 @@ def process(args):
     for split, records in infos.items():
         with open(output / f'processed_scenarios_{split}_infos.pkl', 'wb') as stream:
             pickle.dump(records, stream, protocol=pickle.HIGHEST_PROTOCOL)
-        print(f'{split}: {len(records)} scenarios')
+        log(f'{split}: {len(records)} scenarios')
 
 
 if __name__ == '__main__':
