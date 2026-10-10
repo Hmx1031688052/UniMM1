@@ -85,6 +85,21 @@ validation clip list and treats all remaining clips as training clips.
 
 ## Fit Base-specific anchors on the server
 
+Before a full conversion, inspect a converted training scene on the server:
+
+```bash
+python bench2drive_inspect.py \
+  --root /data/bench2drive/unimm_smoke \
+  --raw-root /data/bench2drive/v1 \
+  --output /data/bench2drive/unimm_smoke/inspection.png
+```
+
+This checks trajectory shapes, finite values and ego dimensions against the raw
+annotations, then draws the map, history, future, and current vehicle boxes.
+Confirm the trajectories follow the roads and vehicle boxes face the correct
+direction before a full conversion. Data converted before the box dimension
+fix must be regenerated with the updated converter.
+
 Install the dependencies with the repository's `install.sh` in a Python 3.10
 environment on the server. The conversion step itself only needs NumPy.
 

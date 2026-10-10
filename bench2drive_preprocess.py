@@ -80,8 +80,9 @@ def actor_state(actor):
     state = np.zeros(10, dtype=np.float32)
     state[:3] = center[:3]
     state[1] *= -1
-    # Bench2Drive extent order follows CARLA; match its official Zoo box conversion.
-    state[3:6] = 2 * extent[[1, 0, 2]]
+    # CARLA records half sizes along actor-local X (length), Y (width), Z.
+    # UniMM uses [length, width, height]; Zoo uses a different box convention.
+    state[3:6] = 2 * extent[:3]
     state[6] = -np.deg2rad(float(rotation[-1]))
     state[9] = 1
     return state

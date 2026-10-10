@@ -10,6 +10,7 @@ from types import SimpleNamespace
 import numpy as np
 
 from bench2drive_anchors import main as make_anchors
+from bench2drive_inspect import check_raw_ego, check_sample
 from bench2drive_preprocess import process, read_frame
 
 
@@ -31,7 +32,7 @@ class Bench2DriveAdapterTest(unittest.TestCase):
                 for frame in range(101):
                     actor = {'class': 'ego_vehicle', 'id': 1,
                              'center': [frame * 0.1, 0, 0],
-                             'extent': [1, 2, 1], 'rotation': [0, 0, 0]}
+                             'extent': [2, 1, 1], 'rotation': [0, 0, 0]}
                     with gzip.open(annos / f'{frame:05d}.json.gz', 'wt', encoding='utf-8') as stream:
                         json.dump({'bounding_boxes': [actor]}, stream)
             split_file = root / 'split.json'
@@ -50,9 +51,12 @@ class Bench2DriveAdapterTest(unittest.TestCase):
                           f"sample_{infos[0]['scenario_id']}.pkl", 'rb') as stream:
                     sample = pickle.load(stream)
                 self.assertEqual(sample['track_infos']['trajs'].shape, (1, 91, 10))
+                np.testing.assert_allclose(sample['track_infos']['trajs'][0, 10, 3:6], [4, 2, 2])
                 self.assertAlmostEqual(sample['track_infos']['trajs'][0, 10, 7], 1.0, places=5)
                 self.assertEqual(sample['map_infos']['all_polylines'].shape, (20, 7))
                 self.assertEqual(sample['tracks_to_predict']['track_index'], [0])
+                check_sample(sample)
+                check_raw_ego(sample, clips)
             anchor_file = root / 'anchors.npy'
             make_anchors(SimpleNamespace(root=str(output), output=str(anchor_file),
                                          num_modes=2, max_per_type=100, seed=2025))
