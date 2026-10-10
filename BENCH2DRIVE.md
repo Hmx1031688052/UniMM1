@@ -78,6 +78,9 @@ python bench2drive_preprocess.py \
 For an initial format check, add `--max-scenarios 8`. Remove it for the full
 conversion. Each 91-frame window contains 1 second of history and 8 seconds of
 future at 10 Hz. Windows never cross clip boundaries or missing frame indices.
+Map lines are thinned to approximately 0.5 m spacing (`--map-spacing`) and their
+points are cropped to 100 m of the current ego position (`--map-radius`), rather
+than keeping entire roads that pass nearby. This bounds per-scene map size.
 The map and actors are both converted from CARLA left-hand coordinates to a
 right-hand XY frame. The converter writes the same `processed_scenarios_*`
 layout read by the existing UniMM dataset class. It uses the official Base

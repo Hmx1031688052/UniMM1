@@ -11,10 +11,20 @@ import numpy as np
 
 from bench2drive_anchors import main as make_anchors
 from bench2drive_inspect import check_raw_ego, check_sample
-from bench2drive_preprocess import process, read_frame
+from bench2drive_preprocess import process, read_frame, thin_map_points, local_map
 
 
 class Bench2DriveAdapterTest(unittest.TestCase):
+    def test_dense_map_is_thinned_and_cropped(self):
+        points = np.column_stack((np.linspace(-100, 100, 2001), np.zeros((2001, 2))))
+        thinned = thin_map_points(points, 0.5)
+        self.assertLessEqual(len(thinned), 402)
+        np.testing.assert_allclose(thinned[[0, -1]], points[[0, -1]])
+        line = np.column_stack((thinned, np.zeros((len(thinned), 3)), np.full(len(thinned), 2)))
+        cropped = local_map([line], np.zeros(3), 10)
+        self.assertTrue((np.linalg.norm(cropped[:, :2], axis=1) <= 10).all())
+        self.assertLessEqual(len(cropped), 41)
+
     def test_conversion_schema_and_split(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

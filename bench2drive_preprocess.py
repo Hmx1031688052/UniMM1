@@ -28,7 +28,15 @@ def town_from_name(name):
     return match.group(1)
 
 
-def map_polylines(map_file):
+def thin_map_points(points, spacing):
+    """Reduce dense map samples by distance along the line, preserving endpoints."""
+    distance = np.r_[0.0, np.cumsum(np.linalg.norm(np.diff(points, axis=0), axis=1))]
+    targets = np.arange(0.0, distance[-1], spacing)
+    indices = np.unique(np.r_[0, np.searchsorted(distance, targets), len(points) - 1])
+    return points[indices]
+
+
+def map_polylines(map_file, spacing=0.5):
     with np.load(map_file, allow_pickle=True) as archive:
         roads = dict(archive['arr'])
     polylines = []
@@ -42,6 +50,7 @@ def map_polylines(map_file):
                     continue
                 points = points[:, :3].copy()
                 points[:, 1] *= -1  # CARLA left hand to right hand
+                points = thin_map_points(points, spacing)
                 delta = np.diff(points, axis=0, prepend=points[:1])
                 norm = np.maximum(np.linalg.norm(delta, axis=1, keepdims=True), 1e-6)
                 direction = delta / norm
@@ -55,8 +64,11 @@ def local_map(polylines, center, radius):
     selected = []
     for line in polylines:
         near = np.linalg.norm(line[:, :2] - center[:2], axis=1) <= radius
-        if near.any():
-            selected.append(line)
+        # Clip the line itself rather than retaining a whole road with a nearby point.
+        boundaries = np.diff(np.r_[False, near, False].astype(np.int8))
+        starts = np.flatnonzero(boundaries == 1)
+        stops = np.flatnonzero(boundaries == -1)
+        selected.extend(line[start:stop] for start, stop in zip(starts, stops))
     if not selected:
         return np.zeros((2, 7), dtype=np.float32)
     return np.concatenate(selected, axis=0)
@@ -144,6 +156,9 @@ def process(args):
 
     if args.stride <= 0:
         raise ValueError('--stride must be positive')
+    spacing = getattr(args, 'map_spacing', 0.5)
+    if spacing <= 0 or args.map_radius <= 0:
+        raise ValueError('--map-spacing and --map-radius must be positive')
     root = Path(args.raw_root)
     clips_root = root / 'v1' if (root / 'v1').is_dir() else root
     map_root = Path(args.map_root)
@@ -166,8 +181,9 @@ def process(args):
             if not matches:
                 raise FileNotFoundError(f'Missing {town}_HD_map.npz in {map_root}')
             log(f'Loading map: {matches[0]}')
-            map_cache[town] = map_polylines(matches[0])
-            log(f'Map ready: {len(map_cache[town])} polylines')
+            map_cache[town] = map_polylines(matches[0], spacing=spacing)
+            log(f'Map ready: {len(map_cache[town])} polylines, '
+                f'{sum(len(line) for line in map_cache[town])} points (spacing {spacing} m)')
         split = 'validation' if clip.name in val_names else 'training'
         frame_paths = sorted((clip / 'anno').glob('*.json.gz'))
         log(f'{split}: {len(frame_paths)} annotation files')
@@ -206,7 +222,8 @@ def process(args):
                 pickle.dump(sample, stream, protocol=pickle.HIGHEST_PROTOCOL)
             infos[split].append({'scenario_id': scene_id, 'tfrecord_file': '', 'tfrecord_idx': 0})
             if verbose:
-                log(f'Saved {scene_id}; total {sum(map(len, infos.values()))} scenarios')
+                log(f'Saved {scene_id}; map points {len(sample["map_infos"]["all_polylines"])}; '
+                    f'total {sum(map(len, infos.values()))} scenarios')
             if args.max_scenarios and sum(map(len, infos.values())) >= args.max_scenarios:
                 break
         if args.max_scenarios and sum(map(len, infos.values())) >= args.max_scenarios:
@@ -225,5 +242,7 @@ if __name__ == '__main__':
     parser.add_argument('--output-root', required=True, help='Server path for processed scenarios')
     parser.add_argument('--stride', type=int, default=10, help='Window stride in frames')
     parser.add_argument('--map-radius', type=float, default=100.0)
+    parser.add_argument('--map-spacing', type=float, default=0.5,
+                        help='Minimum target distance along map lines in meters')
     parser.add_argument('--max-scenarios', type=int, default=0, help='For a small smoke run')
     process(parser.parse_args())
