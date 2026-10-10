@@ -52,13 +52,14 @@ server checkout can receive updates without merge conflicts.
 ```text
 /data/bench2drive/v1/<clip>/anno/00000.json.gz
 /data/bench2drive/maps/Town01_HD_map.npz
-/data/bench2drive/splits/bench2drive_base_train_val_split.json
 /data/bench2drive/unimm_processed/       # generated
 /data/bench2drive/anchors/               # generated
 /runs/unimm_b2d/                          # generated
 ```
 
-Use the [official Base split](https://github.com/Thinklab-SJTU/Bench2DriveZoo/blob/uniad/vad/data/splits/bench2drive_base_train_val_split.json).
+The [official Base split](https://github.com/Thinklab-SJTU/Bench2DriveZoo/blob/uniad/vad/data/splits/bench2drive_base_train_val_split.json)
+is included at `configs/bench2drive_base_train_val_split.json`; pulling this
+repository supplies it without a separate download from raw.githubusercontent.com.
 The converter accepts the Base root or its `v1` directory. It reads only `anno`
 and the town HD maps; cameras, LiDAR, radar, and expert assessments are not
 needed by UniMM's trajectory model. No dataset is copied to the local machine.
@@ -69,7 +70,7 @@ needed by UniMM's trajectory model. No dataset is copied to the local machine.
 python bench2drive_preprocess.py \
   --raw-root /data/bench2drive \
   --map-root /data/bench2drive/maps \
-  --split-file /data/bench2drive/splits/bench2drive_base_train_val_split.json \
+  --split-file configs/bench2drive_base_train_val_split.json \
   --output-root /data/bench2drive/unimm_processed \
   --stride 10
 ```
