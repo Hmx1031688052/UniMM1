@@ -106,6 +106,10 @@ fix must be regenerated with the updated converter.
 Install the dependencies with the repository's `install.sh` in a Python 3.10
 environment on the server. The conversion step itself only needs NumPy.
 
+The pinned Lightning stack imports `pkg_resources`. Keep setuptools at 80.9.0;
+setuptools 82 and later removed that module. To repair an existing environment,
+run `python -m pip install setuptools==80.9.0` inside `unimm`.
+
 ```bash
 python bench2drive_anchors.py \
   --root /data/bench2drive/unimm_processed \
