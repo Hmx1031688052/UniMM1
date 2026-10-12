@@ -88,6 +88,21 @@ validation clip list and treats all remaining clips as training clips.
 
 ## Fit Base-specific anchors on the server
 
+For data converted before CARLA bicycle classification was added, update actor
+types using the current raw annotations (maps and trajectories are preserved):
+
+```bash
+python bench2drive_relabel.py \
+  --root /data/bench2drive/unimm_processed \
+  --raw-root /data/bench2drive/v1 \
+  --apply
+```
+
+This recognizes the bicycle `base_type` and CARLA bicycle blueprint IDs even
+when the annotation class is `vehicle`. It corrects actors present at the current
+frame, which are the actors used in training and full-future anchor collection.
+Omit `--apply` for a dry run. Regenerate anchors if any labels were updated.
+
 Before a full conversion, inspect a converted training scene on the server:
 
 ```bash

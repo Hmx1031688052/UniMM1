@@ -103,13 +103,25 @@ def actor_state(actor):
 def frame_actors(frame):
     actors = {}
     for actor in frame.get('bounding_boxes', []):
-        actor_type = VALID_CLASSES.get(actor.get('class'))
+        actor_type = classify_actor(actor)
         if actor_type is None or 'id' not in actor:
             continue
         state = actor_state(actor)
         if state is not None:
             actors[str(actor['id'])] = (actor_type, state)
     return actors
+
+
+def classify_actor(actor):
+    """CARLA bicycle blueprints are also recorded with class='vehicle'."""
+    if actor.get('class') in ('vehicle', 'ego_vehicle'):
+        base_type = str(actor.get('base_type', '')).lower()
+        type_id = str(actor.get('type_id', '')).lower()
+        if base_type == 'bicycle' or type_id in {
+            'vehicle.bh.crossbike', 'vehicle.diamondback.century', 'vehicle.gazelle.omafiets'
+        }:
+            return 'TYPE_CYCLIST'
+    return VALID_CLASSES.get(actor.get('class'))
 
 
 def make_sample(frames, scene_id, polylines, radius):

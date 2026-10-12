@@ -11,10 +11,42 @@ import numpy as np
 
 from bench2drive_anchors import main as make_anchors
 from bench2drive_inspect import check_raw_ego, check_sample
-from bench2drive_preprocess import process, read_frame, thin_map_points, local_map
+from bench2drive_preprocess import process, read_frame, thin_map_points, local_map, classify_actor
+from bench2drive_relabel import relabel
 
 
 class Bench2DriveAdapterTest(unittest.TestCase):
+    def test_carla_bicycle_mapping_and_existing_data_repair(self):
+        self.assertEqual(classify_actor({'class': 'vehicle', 'type_id': 'vehicle.bh.crossbike'}), 'TYPE_CYCLIST')
+        self.assertEqual(classify_actor({'class': 'vehicle', 'base_type': 'bicycle'}), 'TYPE_CYCLIST')
+        self.assertEqual(classify_actor({'class': 'vehicle', 'base_type': 'motorcycle'}), 'TYPE_VEHICLE')
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            annos = root / 'raw' / 'clip' / 'anno'
+            annos.mkdir(parents=True)
+            with gzip.open(annos / '00010.json.gz', 'wt', encoding='utf-8') as stream:
+                json.dump({'bounding_boxes': [{'id': 7, 'class': 'vehicle', 'base_type': 'bicycle'}]}, stream)
+            processed = root / 'processed'
+            scenes = processed / 'processed_scenarios_training'
+            scenes.mkdir(parents=True)
+            path = scenes / 'sample_clip__00000.pkl'
+            sample = {'track_infos': {'object_id': ['7'], 'object_type': ['TYPE_VEHICLE']},
+                      'map_infos': {'all_polylines': np.zeros((3, 7))}}
+            with open(path, 'wb') as stream:
+                pickle.dump(sample, stream)
+            for split, infos in [('training', [{'scenario_id': 'clip__00000'}]), ('validation', [])]:
+                with open(processed / f'processed_scenarios_{split}_infos.pkl', 'wb') as stream:
+                    pickle.dump(infos, stream)
+            before = path.read_bytes()
+            self.assertEqual(relabel(processed, root / 'raw'), (1, 1))
+            self.assertEqual(path.read_bytes(), before)
+            self.assertEqual(relabel(processed, root / 'raw', apply=True), (1, 1))
+            with open(path, 'rb') as stream:
+                corrected = pickle.load(stream)
+            self.assertEqual(corrected['track_infos']['object_type'], ['TYPE_CYCLIST'])
+            np.testing.assert_array_equal(corrected['map_infos']['all_polylines'], sample['map_infos']['all_polylines'])
+            self.assertEqual(relabel(processed, root / 'raw', apply=True), (0, 0))
+
     def test_dense_map_is_thinned_and_cropped(self):
         points = np.column_stack((np.linspace(-100, 100, 2001), np.zeros((2001, 2))))
         thinned = thin_map_points(points, 0.5)
