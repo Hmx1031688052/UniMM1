@@ -40,6 +40,8 @@ if __name__ == '__main__':
     parser.add_argument('--experiment', type=str, default='test')
     parser.add_argument('--output_dir', type=str, default='./output')
     parser.add_argument('--ckpt_path', type=str, default=None)
+    parser.add_argument('--smoke_test', action='store_true',
+                        help='Run one epoch with 20 train and 2 validation batches')
     UniMM.add_model_specific_args(parser)
     args = parser.parse_args()
 
@@ -55,9 +57,15 @@ if __name__ == '__main__':
         accelerator=args.accelerator, devices=args.devices,
         strategy=DDPStrategy(find_unused_parameters=False, gradient_as_bucket_view=True)
                  if args.devices > 1 else 'auto',
-        callbacks=[model_checkpoint, lr_monitor],
+        callbacks=[lr_monitor] if args.smoke_test else [model_checkpoint, lr_monitor],
+        enable_checkpointing=not args.smoke_test,
         accumulate_grad_batches=args.accumulate_grad_batches,
-        max_epochs=args.max_epochs,
+        max_epochs=1 if args.smoke_test else args.max_epochs,
+        limit_train_batches=20 if args.smoke_test else 1.0,
+        limit_val_batches=2 if args.smoke_test else 1.0,
+        num_sanity_val_steps=0 if args.smoke_test else 2,
+        log_every_n_steps=1 if args.smoke_test else 50,
+        detect_anomaly=args.smoke_test,
         default_root_dir=f'{args.output_dir}/{args.experiment}'
     )
     

@@ -156,6 +156,12 @@ conversion first, then inspect trajectory and map alignment before training the
 full Base set. The converted Base data has train and validation splits only;
 the training path no longer requires a testing split.
 
+For a pipeline check with the full converted train/validation data, add
+`--smoke_test`, use batch sizes of 1, and set `--num_workers 2`. This runs at most
+20 training batches and 2 validation batches in one epoch, logs every step and
+enables autograd anomaly detection. Checkpoint saving is disabled for this run.
+Confirm finite training and validation losses before launching a full run.
+
 ## Current limits
 
 - The adapter has a local synthetic smoke check but has not yet been checked

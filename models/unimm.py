@@ -865,8 +865,8 @@ class UniMM(pl.LightningModule):
         data['agent']['velocity'] = match_dict['sim_velocities']
 
         reg_loss, cls_loss, reg_cnt, cls_cnt = self.compute_loss(data, match_dict)
-        self.log('train_reg_loss', reg_loss, on_step=True, on_epoch=True, batch_size=reg_cnt, sync_dist=True)
-        self.log('train_cls_loss', cls_loss, on_step=True, on_epoch=True, batch_size=cls_cnt, sync_dist=True)
+        self.log('train_reg_loss', reg_loss, on_step=True, on_epoch=True, batch_size=reg_cnt, sync_dist=True, prog_bar=True)
+        self.log('train_cls_loss', cls_loss, on_step=True, on_epoch=True, batch_size=cls_cnt, sync_dist=True, prog_bar=True)
         loss = reg_loss + cls_loss
         return loss
 
@@ -885,8 +885,8 @@ class UniMM(pl.LightningModule):
         data['agent']['velocity'] = match_dict['sim_velocities']
 
         reg_loss, cls_loss, reg_cnt, cls_cnt = self.compute_loss(data, match_dict)
-        self.log('val_reg_loss', reg_loss, on_step=False, on_epoch=True, batch_size=reg_cnt, sync_dist=True)
-        self.log('val_cls_loss', cls_loss, on_step=False, on_epoch=True, batch_size=cls_cnt, sync_dist=True)
+        self.log('val_reg_loss', reg_loss, on_step=False, on_epoch=True, batch_size=reg_cnt, sync_dist=True, prog_bar=True)
+        self.log('val_cls_loss', cls_loss, on_step=False, on_epoch=True, batch_size=cls_cnt, sync_dist=True, prog_bar=True)
         return
 
     def configure_optimizers(self):
