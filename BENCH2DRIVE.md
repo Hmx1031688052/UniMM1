@@ -120,6 +120,20 @@ run. Never use the bundled Waymo anchor file for Bench2Drive training.
 
 ## Train Anchor-Based-4s on the server
 
+To visualize the generated anchors without opening a GUI:
+
+```bash
+python bench2drive_anchor_visualize.py \
+  --anchor-file /data/bench2drive/anchors/2048_anchor-trajs_bench2drive_10Hz-8s.npy \
+  --output /data/bench2drive/anchors/anchor_overview.png
+```
+
+The PNG compares vehicle, pedestrian and cyclist paths and endpoints. A companion
+JSON reports duplicates and identical arrays across all five agent types. Paths
+show up to 256 unique trajectories; endpoints include every unique trajectory.
+Use `--max-lines 2048` for all modes and `--horizon-seconds 4` for the training
+prefix. All coordinates are actor-local meters, with X forward and Y lateral.
+
 ```bash
 python train.py \
   --dataset bench2drive \
