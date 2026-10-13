@@ -265,6 +265,8 @@ class UniMM(pl.LightningModule):
         best_mode_list = []
         match_mode_list = []
         match_cls_mask_list = []
+        replacement_candidates = 0
+        replacement_accepted = 0
         sim_masks = [sim_data['agent']['valid_mask'][:, :self.num_historical_steps].clone()]
         sim_positions = [sim_data['agent']['position'][:, :self.num_historical_steps, :self.input_dim].clone()]
         sim_headings = [sim_data['agent']['heading'][:, :self.num_historical_steps].clone()]
@@ -430,6 +432,7 @@ class UniMM(pl.LightningModule):
             if not open_loop:
                 # filter unmatched trajs to update gt
                 valid_match_mask = reg_mask[:, :self.num_execution_steps][:, -1].clone()
+                replacement_candidates += valid_match_mask.sum()
                 exec_traj = pred_traj[:, :self.num_execution_steps][:, None, -1:]
                 exec_gt = agent_target[:, :self.num_execution_steps][:, -1:]
                 exec_distance = self.compute_distance_traj(
@@ -437,6 +440,7 @@ class UniMM(pl.LightningModule):
                     data['agent']['width'], data['agent']['length']
                 ).squeeze() # (num_agents)
                 valid_match_mask[exec_distance > match_threshold] = False
+                replacement_accepted += valid_match_mask.sum()
 
                 # convert to global coordinate
                 sample_position = torch.matmul(
@@ -508,6 +512,8 @@ class UniMM(pl.LightningModule):
 
         return {
             'reg_mask_list': reg_mask_list,
+            'replacement_candidates': replacement_candidates,
+            'replacement_accepted': replacement_accepted,
             'cls_mask_list': cls_mask_list,
             'agent_target_list': agent_target_list,
             'best_mode_list': best_mode_list,

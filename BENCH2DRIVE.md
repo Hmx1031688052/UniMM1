@@ -200,6 +200,32 @@ the actual 8-second endpoint. Subsets span different clips before taking extra
 windows from a clip. Use `--max-scenes 0` for all validation windows. These
 trajectory diagnostics are not WOSAC metrics or CARLA driving scores.
 
+## Diagnose poor rollouts
+
+For a poor rollout result, run the decomposition diagnostic on the server. It
+compares unrestricted sampling, top-1 and top-6 sampling at 0.5, 1, 2, 4 and
+8 seconds; groups agents by motion and type; measures the training-style
+replacement rate; and checks data continuity, map coverage and anchor
+trajectory coverage. It writes `diagnostics_summary.json`, the full
+`diagnostics.json`, and comparison plots. It reads the existing validation
+annotations and checkpoint without changing either.
+
+```bash
+python -u bench2drive_diagnose.py \
+  --root /media/pc/FanXiang2T/b2d/data/unimm_processed \
+  --raw-root /media/pc/FanXiang2T/V1 \
+  --run-dir /media/pc/FanXiang2T/b2d/data/unimm_runs/b2d_anchor_based_4s_bs4 \
+  --output-dir /media/pc/FanXiang2T/b2d/data/unimm_diagnose_bs4 \
+  --max-scenes 32 \
+  --rollouts 8
+```
+
+Run it first on the same 32-window subset for direct comparison. If the
+short-horizon errors are already high, inspect data, coordinate conversion,
+or anchor coverage. If errors grow mainly after 2–4 seconds, inspect repeated
+closed-loop replanning and sampling. The full validation split can be run with
+`--max-scenes 0` after the subset finishes.
+
 ## Current limits
 
 - The adapter has a local synthetic smoke check but has not yet been checked
