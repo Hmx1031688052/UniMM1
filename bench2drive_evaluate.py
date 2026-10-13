@@ -125,6 +125,7 @@ def plot_rollout(data, prediction, target, valid, output):
 
 def main(args):
     import torch
+    from torch_geometric.data import Batch
     from datasets import WaymoDataset
     from models import UniMM
 
@@ -159,7 +160,8 @@ def main(args):
         velocity = data['agent']['velocity'][:, 10, :2].numpy()
         constant_velocity = origin[:, None] + velocity[:, None] * (np.arange(1, 81) * 0.1)[None, :, None]
         baseline = displacement_errors(constant_velocity[None], target, valid)
-        device_data = data.clone().to(args.device)
+        # Cached agent inference requires per-node batch indices even for one scene.
+        device_data = Batch.from_data_list([data.clone()]).to(args.device)
         predictions = []
         with torch.inference_mode():
             for _ in range(args.rollouts):
