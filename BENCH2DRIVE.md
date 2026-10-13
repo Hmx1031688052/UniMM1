@@ -181,6 +181,25 @@ For a pipeline check with the full converted train/validation data, add
 enables autograd anomaly detection. Checkpoint saving is disabled for this run.
 Confirm finite training and validation losses before launching a full run.
 
+## Evaluate the trained model
+
+```bash
+python bench2drive_evaluate.py \
+  --root /data/bench2drive/unimm_processed \
+  --run-dir /runs/unimm_b2d/unimm_anchor_based_b2d_4s \
+  --output-dir /runs/unimm_b2d/evaluation \
+  --max-scenes 32 --rollouts 8
+```
+
+The evaluator chooses the recorded best checkpoint from the newest run with a
+`last.ckpt`, or accepts an explicit `--ckpt`. It performs autoregressive inference
+without future states as inputs and writes masked ADE/FDE in meters, per-agent
+oracle minima across sampled rollouts, constant-velocity baseline errors, and
+three ground-truth/rollout comparison images. FDE includes only agents valid at
+the actual 8-second endpoint. Subsets span different clips before taking extra
+windows from a clip. Use `--max-scenes 0` for all validation windows. These
+trajectory diagnostics are not WOSAC metrics or CARLA driving scores.
+
 ## Current limits
 
 - The adapter has a local synthetic smoke check but has not yet been checked
